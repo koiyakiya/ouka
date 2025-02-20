@@ -30,8 +30,6 @@ async def post_vn(query: str) -> list[VNDBQuery]:
             "sort": "searchrank"
             }) as response:
             res = await response.json()
-            # print out all results in a VNDBQuery object
-            
             queries = [
                 VNDBQuery(
                     id=result["id"],

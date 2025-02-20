@@ -28,9 +28,7 @@ async def vn_command(
         url=res[0].vndb_link,
         color=0x00FF00,
     )
-    # Check if the image is NSFW
-    _log.critical(f"{res[0].image_sexual=}, {res[0].image_violence=}")
-    if res[0].image_sexual == 0 and res[0].image_violence == 0:
+    if res[0].image_sexual <= 0.6 and res[0].image_violence <= 0.6:
         embed.set_image(res[0].image_url)
     if res[0].rating is None:
         embed.add_field("Rating", "N/A")
