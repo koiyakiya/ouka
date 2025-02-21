@@ -12,31 +12,27 @@ plugin = arc.GatewayPlugin("VNModule")
 
 @plugin.inject_dependencies
 async def vn_autocomplete(data: arc.AutocompleteData[arc.GatewayClient, str], db: Database = arc.inject()) -> list[str]:
-    value = data.focused_value
-    choices = []
-    if value is None: return []
+    value = data.focused_value or ""
+    if not value:
+        return []
+
+    # If input is "v123", strip the 'v'
     if value.startswith("v") and value[1:].isdigit():
         value = value[1:]
+
+    results = []
     if value.isdigit():
         cached_result = await vndb_cache.get_id_cached(db, f"v{value}")
         if cached_result:
-            choices.append(f"{cached_result.title} ({cached_result.id}) (Cache)")
-        else:
-            vndb_result = await vndb.post_vn(db, f"v{value}")
-            if vndb_result:
-                for result in vndb_result:
-                    choices.append(f"{result.title} ({result.id}) (API)")
+            return [f"{cached_result.title} ({cached_result.id}) (Cache)"]
+        results = await vndb.post_vn(db, f"v{value}")
     else:
         cached_results = await vndb_cache.search_cached_queries(db, value)
         if cached_results:
-            for result in cached_results:
-                choices.append(f"{result.title} ({result.id}) (Cache)")
-        else:
-            vndb_results = await vndb.post_vn(db, f"{value}")
-            if vndb_results:
-                for result in vndb_results:
-                    choices.append(f"{result.title} ({result.id}) (API)")
-    return choices
+            return [f"{r.title} ({r.id}) (Cache)" for r in cached_results]
+        results = await vndb.post_vn(db, value)
+
+    return [f"{r.title} ({r.id}) (API)" for r in results] if results else []
 
 @plugin.include
 @arc.slash_command("vn", "Search for a visual novel on VNDB")
@@ -46,9 +42,8 @@ async def vn_command(
     query: arc.Option[str, arc.StrParams("The visual novel you want to search for.", autocomplete_with=vn_autocomplete)],
     db: Database = arc.inject(),
 ) -> None:
-    # Get everything up until (
     query = query.split(" (")[0]
-    # Checks if it's in the cache:
+    # Defer the response to prevent the command from timing out
     await ctx.defer()
     
     res = await vndb_cache.search_cached_queries(db, query)
