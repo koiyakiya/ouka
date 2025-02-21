@@ -7,7 +7,7 @@ import logging
 import sqlite3
 
 import aiosqlite.context
-from .sql import CREATE_TABLE
+from .sql import CREATE_BASE_TABLE, CREATE_FTS5_TABLE, VN_TRIGGERS
 from . import __DEBUG_DB_PATH__
 import os
 from .exceptions import DatabaseConnectionError, DatabaseExecutionError, DatabaseTransactionError
@@ -82,7 +82,8 @@ class Database:
             Exception: If there is an issue executing the CREATE_TABLE command.
         """
         try:  
-            await self.exec(CREATE_TABLE)
+            await self.exec(CREATE_BASE_TABLE)
+            await self.exec(CREATE_FTS5_TABLE)
         except sqlite3.Error as e:
             _log.critical("Failed to create tables.")
             raise DatabaseExecutionError("Failed to create tables.") from e
@@ -113,12 +114,12 @@ class Database:
             cursor = await self.conn.execute(sql, parameters)
         except sqlite3.Error as e:
             _log.critical(f"Failed to execute SQL: {sql}")
-            raise DatabaseExecutionError(f"Failed to execute SQL into {self.path}.") from e
+            raise DatabaseExecutionError(f"Failed to execute SQL into {self.path}. {e}")
         try:
             await self.conn.commit()
         except sqlite3.Error as e:
             _log.critical("Failed to commit transaction.")
-            raise DatabaseTransactionError("Failed to commit transaction.") from e
+            raise DatabaseTransactionError(f"Failed to commit transaction. {e}")
         return cursor
                 
     
@@ -172,3 +173,9 @@ class Database:
             except FileNotFoundError as e:
                 _log.critical(f"Failed to delete debug database at {__DEBUG_DB_PATH__}.")
                 raise e
+            
+    async def _execute_triggers(self) -> None:
+        # Executes the VN cache virtual database triggers.
+        for trigger in VN_TRIGGERS:
+            await self.exec(trigger)
+        _log.debug("Executed all triggers.")

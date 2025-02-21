@@ -48,11 +48,11 @@ async def startup_hook(client: arc.GatewayClient) -> None:
         db = Database(Path(__PROD_DB_PATH__))
 
     await db.connect()
-
+    
     await db.create()
     
-    query = await vndb.post_vn("v1")
-    print(query[0].alt_title)
+    # Execute all VN cache triggers
+    await db._execute_triggers()
 
     # Use arc for dependency injection. Now we can use the db practically anywhere without
     # having to make multiple instances of it.

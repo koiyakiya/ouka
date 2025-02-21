@@ -1,10 +1,8 @@
 import aiohttp
 from dataclasses import dataclass
-import logging
+from ..db import Database
 
-_log = logging.getLogger(__name__)
-
-@dataclass()
+@dataclass(slots=True)
 class VNDBQuery:
     id: str
     title: str
@@ -14,7 +12,7 @@ class VNDBQuery:
     released: str | None
     languages: list[str]
     platforms: list[str]
-    image_url: str
+    image_url: str | None
     image_sexual: int
     image_violence: int
     length_minutes: int | None
@@ -22,13 +20,17 @@ class VNDBQuery:
     rating: float | None
     vndb_link: str
     
-async def post_vn(query: str) -> list[VNDBQuery]:
+async def post_vn(db: Database, query: str) -> list[VNDBQuery]:
+    from .vndb_cache import pass_to_cache, in_cache
     async with aiohttp.ClientSession() as session:
-        async with session.post("https://api.vndb.org/kana/vn", json={
-            "filters": ["search", "=", query],
-            "fields": "id, title, alttitle, aliases, olang, released, languages, platforms, image.url, image.sexual, image.violence, length_minutes, description, rating",
-            "sort": "searchrank"
-            }) as response:
+        async with session.post(
+            "https://api.vndb.org/kana/vn", 
+            json={
+                "filters": ["search", "=", query],
+                "fields": "id, title, alttitle, aliases, olang, released, languages, platforms, image.url, image.sexual, image.violence, length_minutes, description, rating",
+                "sort": "searchrank"
+            },
+        ) as response:
             res = await response.json()
             queries = [
                 VNDBQuery(
@@ -50,4 +52,13 @@ async def post_vn(query: str) -> list[VNDBQuery]:
                 )
                 for result in res["results"]
             ]
+            for q in queries:
+                cached = await in_cache(db, q)
+                if cached:
+                    continue
+                else:
+                    await pass_to_cache(db, q)
             return queries
+        
+
+
