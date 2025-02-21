@@ -10,10 +10,15 @@ import aiosqlite.context
 from .sql import CREATE_BASE_TABLE, CREATE_FTS5_TABLE, VN_TRIGGERS
 from . import __DEBUG_DB_PATH__
 import os
-from .exceptions import DatabaseConnectionError, DatabaseExecutionError, DatabaseTransactionError
+from .exceptions import (
+    DatabaseConnectionError,
+    DatabaseExecutionError,
+    DatabaseTransactionError,
+)
 import asyncio
 
 _log = logging.getLogger(__name__)
+
 
 class Database:
     __slots__ = (
@@ -59,18 +64,23 @@ class Database:
                 self.conn = await aiosqlite.connect(self.path)
                 _log.debug(f"Connected to database at {self.path}")
             except sqlite3.Error as e:
-                _log.critical(f"Database connection failed: {str(e)}. Attempting to restart...")
+                _log.critical(
+                    f"Database connection failed: {str(e)}. Attempting to restart..."
+                )
                 for i in range(5):
                     await asyncio.sleep(1)
                     try:
                         self.conn = await aiosqlite.connect(self.path)
-                        _log.debug(f"Connected to database at {self.path} after retry #{i + 1}.")
+                        _log.debug(
+                            f"Connected to database at {self.path} after retry #{i + 1}."
+                        )
                         return self.conn
                     except sqlite3.Error:
                         continue
-                raise DatabaseConnectionError(f"Failed to connect to the database at {self.path}") from e
+                raise DatabaseConnectionError(
+                    f"Failed to connect to the database at {self.path}"
+                ) from e
         return self.conn
-        
 
     async def create(self) -> None:
         """
@@ -81,7 +91,7 @@ class Database:
         Raises:
             Exception: If there is an issue executing the CREATE_TABLE command.
         """
-        try:  
+        try:
             await self.exec(CREATE_BASE_TABLE)
             await self.exec(CREATE_FTS5_TABLE)
         except sqlite3.Error as e:
@@ -110,7 +120,7 @@ class Database:
         """
         if parameters is None:
             parameters = []
-        try: 
+        try:
             cursor = await self.conn.execute(sql, parameters)
         except sqlite3.Error as e:
             _log.critical(f"Failed to execute SQL: {sql}")
@@ -121,8 +131,7 @@ class Database:
             _log.critical("Failed to commit transaction.")
             raise DatabaseTransactionError(f"Failed to commit transaction. {e}")
         return cursor
-                
-    
+
     @asynccontextmanager
     async def sel(
         self, sql: str, parameters: Optional[Iterable[Any]] | None = None
@@ -139,7 +148,7 @@ class Database:
 
         Raises:
             Exception: If an exception occurs during the execution of the SQL query, it is logged and re-raised.
-            
+
         Notes:
             Exactly the same as the `execute` aiosqlite function, but renamed for better readability.
         """
@@ -171,9 +180,11 @@ class Database:
             try:
                 os.remove(__DEBUG_DB_PATH__)
             except FileNotFoundError as e:
-                _log.critical(f"Failed to delete debug database at {__DEBUG_DB_PATH__}.")
+                _log.critical(
+                    f"Failed to delete debug database at {__DEBUG_DB_PATH__}."
+                )
                 raise e
-            
+
     async def _execute_triggers(self) -> None:
         # Executes the VN cache virtual database triggers.
         for trigger in VN_TRIGGERS:

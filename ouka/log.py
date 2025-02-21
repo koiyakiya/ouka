@@ -15,7 +15,9 @@ def init_logger(level: int = logging.INFO) -> logging.StreamHandler[t.TextIO]:
     class CustomFormatter(logging.Formatter):
         def format(self, record: logging.LogRecord) -> str:
             log_fmt = FORMATS[record.levelno]
-            formatter = logging.Formatter(log_fmt, style="{", datefmt="%Y-%m-%d %H:%M:%S")
+            formatter = logging.Formatter(
+                log_fmt, style="{", datefmt="%Y-%m-%d %H:%M:%S"
+            )
             return formatter.format(record)
 
     handler = logging.StreamHandler()

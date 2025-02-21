@@ -46,7 +46,7 @@ VN_TRIGGERS = [
             cover_image_url = new.cover_image_url
         WHERE id = new.id;
     END;
-    """
+    """,
 ]
 
 VN_SEARCH_QUERY = """

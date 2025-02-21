@@ -2,6 +2,7 @@ import aiohttp
 from dataclasses import dataclass
 from ..db import Database
 
+
 @dataclass(slots=True)
 class VNDBQuery:
     id: str
@@ -19,16 +20,18 @@ class VNDBQuery:
     description: str | None
     rating: float | None
     vndb_link: str
-    
+
+
 async def post_vn(db: Database, query: str) -> list[VNDBQuery]:
     from .vndb_cache import pass_to_cache, in_cache
+
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            "https://api.vndb.org/kana/vn", 
+            "https://api.vndb.org/kana/vn",
             json={
                 "filters": ["search", "=", query],
                 "fields": "id, title, alttitle, aliases, olang, released, languages, platforms, image.url, image.sexual, image.violence, length_minutes, description, rating",
-                "sort": "searchrank"
+                "sort": "searchrank",
             },
         ) as response:
             res = await response.json()
@@ -48,7 +51,7 @@ async def post_vn(db: Database, query: str) -> list[VNDBQuery]:
                     length_minutes=result["length_minutes"],
                     description=result["description"],
                     rating=result["rating"],
-                    vndb_link=f"https://vndb.org/{result['id']}"
+                    vndb_link=f"https://vndb.org/{result['id']}",
                 )
                 for result in res["results"]
             ]
@@ -59,6 +62,3 @@ async def post_vn(db: Database, query: str) -> list[VNDBQuery]:
                 else:
                     await pass_to_cache(db, q)
             return queries
-        
-
-

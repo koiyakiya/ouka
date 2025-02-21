@@ -48,9 +48,9 @@ async def startup_hook(client: arc.GatewayClient) -> None:
         db = Database(Path(__PROD_DB_PATH__))
 
     await db.connect()
-    
+
     await db.create()
-    
+
     # Execute all VN cache triggers
     await db._execute_triggers()
 

@@ -1,0 +1,5 @@
+aiohttp
+aiosqlite
+hikari[speedups]
+hikari-arc
+python-dotenv

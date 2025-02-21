@@ -10,8 +10,11 @@ _log = logging.getLogger(__name__)
 
 plugin = arc.GatewayPlugin("VNModule")
 
+
 @plugin.inject_dependencies
-async def vn_autocomplete(data: arc.AutocompleteData[arc.GatewayClient, str], db: Database = arc.inject()) -> list[str]:
+async def vn_autocomplete(
+    data: arc.AutocompleteData[arc.GatewayClient, str], db: Database = arc.inject()
+) -> list[str]:
     value = data.focused_value or ""
     if not value:
         return []
@@ -34,18 +37,25 @@ async def vn_autocomplete(data: arc.AutocompleteData[arc.GatewayClient, str], db
 
     return [f"{r.title} ({r.id}) (API)" for r in results] if results else []
 
+
 @plugin.include
 @arc.slash_command("vn", "Search for a visual novel on VNDB")
 @plugin.inject_dependencies
 async def vn_command(
     ctx: arc.GatewayContext,
-    query: arc.Option[str, arc.StrParams("The visual novel you want to search for.", autocomplete_with=vn_autocomplete)],
+    query: arc.Option[
+        str,
+        arc.StrParams(
+            "The visual novel you want to search for.",
+            autocomplete_with=vn_autocomplete,
+        ),
+    ],
     db: Database = arc.inject(),
 ) -> None:
     query = query.split(" (")[0]
     # Defer the response to prevent the command from timing out
     await ctx.defer()
-    
+
     res = await vndb_cache.search_cached_queries(db, query)
     if not res:
         res = await vndb.post_vn(db, query)
@@ -55,15 +65,19 @@ async def vn_command(
     title_prefix = "🔞 " if res[0].image_sexual > 0 else ""
     embed = hk.Embed(
         title=f"{title_prefix}{res[0].title} ({str(res[0].id)})",
-        description=(re.sub(r'\[url=(.*?)\](.*?)\[/url\]', r'[\2](\1)', res[0].description)
-                    .replace('[b]', '**').replace('[/b]', '**')
-                    .replace('(/c', '(https://vndb.org/c')),
+        description=(
+            re.sub(r"\[url=(.*?)\](.*?)\[/url\]", r"[\2](\1)", res[0].description)
+            .replace("[b]", "**")
+            .replace("[/b]", "**")
+            .replace("(/c", "(https://vndb.org/c")
+        ),
         color=0x00FF00,
     )
     if res[0].image_sexual <= 0.6:
         embed.set_image(res[0].image_url)
-        
+
     await ctx.respond(embed=embed)
+
 
 @arc.loader
 def loader(client: arc.GatewayClient, db: Database = arc.inject()) -> None:
